@@ -372,21 +372,6 @@
 <a href="#370" id="370">370</a>
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
 </pre></div><pre class="rust"><code><span class="comment">// Licensed to the Apache Software Foundation (ASF) under one
 // or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
@@ -405,9 +390,9 @@
 // under the License.
 
 </span><span class="kw">use </span>std::fmt::Debug;
+<span class="kw">use </span>std::future::Future;
+
 <span class="kw">use </span>std::io;
-<span class="kw">use </span>std::task::Context;
-<span class="kw">use </span>std::task::Poll;
 
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>bytes::Bytes;
@@ -426,7 +411,7 @@
 ///
 /// ## Basic Setup
 ///
-/// ```
+/// ```no_build
 /// use anyhow::Result;
 /// use opendal::layers::MinitraceLayer;
 /// use opendal::services;
@@ -440,7 +425,7 @@
 ///
 /// ## Real usage
 ///
-/// ```no_run
+/// ```no_build
 /// use std::error::Error;
 ///
 /// use anyhow::Result;
@@ -491,7 +476,7 @@
 ///
 /// For example:
 ///
-/// ```no_run
+/// ```no_build
 /// extern crate minitrace_jaeger;
 ///
 /// use minitrace::collector::Config;
@@ -686,30 +671,22 @@
 }
 
 <span class="kw">impl</span>&lt;R: oio::Read&gt; oio::Read <span class="kw">for </span>MinitraceWrapper&lt;R&gt; {
-    <span class="kw">fn </span>poll_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; Poll&lt;<span class="prelude-ty">Result</span>&lt;usize&gt;&gt; {
-        <span class="kw">let </span>_g = <span class="self">self</span>.span.set_local_parent();
-        <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(ReadOperation::Read.into_static());
-        <span class="self">self</span>.inner.poll_read(cx, buf)
-    }
+    <span class="attr">#[trace(enter_on_poll = <span class="bool-val">true</span>)]
+    </span><span class="kw">async fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, limit: usize) -&gt; <span class="prelude-ty">Result</span>&lt;Bytes&gt; {
+        <span class="self">self</span>.inner.read(limit).<span class="kw">await
+    </span>}
 
-    <span class="kw">fn </span>poll_seek(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;, pos: io::SeekFrom) -&gt; Poll&lt;<span class="prelude-ty">Result</span>&lt;u64&gt;&gt; {
-        <span class="kw">let </span>_g = <span class="self">self</span>.span.set_local_parent();
-        <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(ReadOperation::Seek.into_static());
-        <span class="self">self</span>.inner.poll_seek(cx, pos)
-    }
-
-    <span class="kw">fn </span>poll_next(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;) -&gt; Poll&lt;<span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;Bytes&gt;&gt;&gt; {
-        <span class="kw">let </span>_g = <span class="self">self</span>.span.set_local_parent();
-        <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(ReadOperation::Next.into_static());
-        <span class="self">self</span>.inner.poll_next(cx)
-    }
+    <span class="attr">#[trace(enter_on_poll = <span class="bool-val">true</span>)]
+    </span><span class="kw">async fn </span>seek(<span class="kw-2">&amp;mut </span><span class="self">self</span>, pos: io::SeekFrom) -&gt; <span class="prelude-ty">Result</span>&lt;u64&gt; {
+        <span class="self">self</span>.inner.seek(pos).<span class="kw">await
+    </span>}
 }
 
 <span class="kw">impl</span>&lt;R: oio::BlockingRead&gt; oio::BlockingRead <span class="kw">for </span>MinitraceWrapper&lt;R&gt; {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, limit: usize) -&gt; <span class="prelude-ty">Result</span>&lt;Bytes&gt; {
         <span class="kw">let </span>_g = <span class="self">self</span>.span.set_local_parent();
         <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(ReadOperation::BlockingRead.into_static());
-        <span class="self">self</span>.inner.read(buf)
+        <span class="self">self</span>.inner.read(limit)
     }
 
     <span class="kw">fn </span>seek(<span class="kw-2">&amp;mut </span><span class="self">self</span>, pos: io::SeekFrom) -&gt; <span class="prelude-ty">Result</span>&lt;u64&gt; {
@@ -717,36 +694,30 @@
         <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(ReadOperation::BlockingSeek.into_static());
         <span class="self">self</span>.inner.seek(pos)
     }
-
-    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;Bytes&gt;&gt; {
-        <span class="kw">let </span>_g = <span class="self">self</span>.span.set_local_parent();
-        <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(ReadOperation::BlockingNext.into_static());
-        <span class="self">self</span>.inner.next()
-    }
 }
 
 <span class="kw">impl</span>&lt;R: oio::Write&gt; oio::Write <span class="kw">for </span>MinitraceWrapper&lt;R&gt; {
-    <span class="kw">fn </span>poll_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;, bs: <span class="kw-2">&amp;</span><span class="kw">dyn </span>oio::WriteBuf) -&gt; Poll&lt;<span class="prelude-ty">Result</span>&lt;usize&gt;&gt; {
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bs: Bytes) -&gt; <span class="kw">impl </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;usize&gt;&gt; + Send {
         <span class="kw">let </span>_g = <span class="self">self</span>.span.set_local_parent();
         <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(WriteOperation::Write.into_static());
-        <span class="self">self</span>.inner.poll_write(cx, bs)
+        <span class="self">self</span>.inner.write(bs)
     }
 
-    <span class="kw">fn </span>poll_abort(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;) -&gt; Poll&lt;<span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+    <span class="kw">fn </span>abort(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;()&gt;&gt; + Send {
         <span class="kw">let </span>_g = <span class="self">self</span>.span.set_local_parent();
         <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(WriteOperation::Abort.into_static());
-        <span class="self">self</span>.inner.poll_abort(cx)
+        <span class="self">self</span>.inner.abort()
     }
 
-    <span class="kw">fn </span>poll_close(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;) -&gt; Poll&lt;<span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+    <span class="kw">fn </span>close(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;()&gt;&gt; + Send {
         <span class="kw">let </span>_g = <span class="self">self</span>.span.set_local_parent();
         <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(WriteOperation::Close.into_static());
-        <span class="self">self</span>.inner.poll_close(cx)
+        <span class="self">self</span>.inner.close()
     }
 }
 
 <span class="kw">impl</span>&lt;R: oio::BlockingWrite&gt; oio::BlockingWrite <span class="kw">for </span>MinitraceWrapper&lt;R&gt; {
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bs: <span class="kw-2">&amp;</span><span class="kw">dyn </span>oio::WriteBuf) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bs: Bytes) -&gt; <span class="prelude-ty">Result</span>&lt;usize&gt; {
         <span class="kw">let </span>_g = <span class="self">self</span>.span.set_local_parent();
         <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(WriteOperation::BlockingWrite.into_static());
         <span class="self">self</span>.inner.write(bs)
@@ -760,11 +731,10 @@
 }
 
 <span class="kw">impl</span>&lt;R: oio::List&gt; oio::List <span class="kw">for </span>MinitraceWrapper&lt;R&gt; {
-    <span class="kw">fn </span>poll_next(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;) -&gt; Poll&lt;<span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;oio::Entry&gt;&gt;&gt; {
-        <span class="kw">let </span>_g = <span class="self">self</span>.span.set_local_parent();
-        <span class="kw">let </span>_span = LocalSpan::enter_with_local_parent(ListOperation::Next.into_static());
-        <span class="self">self</span>.inner.poll_next(cx)
-    }
+    <span class="attr">#[trace(enter_on_poll = <span class="bool-val">true</span>)]
+    </span><span class="kw">async fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;oio::Entry&gt;&gt; {
+        <span class="self">self</span>.inner.next().<span class="kw">await
+    </span>}
 }
 
 <span class="kw">impl</span>&lt;R: oio::BlockingList&gt; oio::BlockingList <span class="kw">for </span>MinitraceWrapper&lt;R&gt; {

@@ -448,16 +448,6 @@
 <a href="#446" id="446">446</a>
 <a href="#447" id="447">447</a>
 <a href="#448" id="448">448</a>
-<a href="#449" id="449">449</a>
-<a href="#450" id="450">450</a>
-<a href="#451" id="451">451</a>
-<a href="#452" id="452">452</a>
-<a href="#453" id="453">453</a>
-<a href="#454" id="454">454</a>
-<a href="#455" id="455">455</a>
-<a href="#456" id="456">456</a>
-<a href="#457" id="457">457</a>
-<a href="#458" id="458">458</a>
 </pre></div><pre class="rust"><code><span class="comment">// Licensed to the Apache Software Foundation (ASF) under one
 // or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
@@ -482,8 +472,10 @@
 #![allow(dead_code)]
 
 </span><span class="kw">use </span>std::any::Any;
+<span class="kw">use </span>std::cmp::min;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::fmt::Debug;
+<span class="kw">use </span>std::future::Future;
 <span class="kw">use </span>std::io::Result;
 <span class="kw">use </span>std::io::SeekFrom;
 <span class="kw">use </span>std::net::SocketAddr;
@@ -511,7 +503,7 @@
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_build
 /// use std::time::Duration;
 ///
 /// use madsim::net::NetSim;
@@ -722,28 +714,20 @@
 }
 
 <span class="kw">impl </span>oio::Read <span class="kw">for </span>MadsimReader {
-    <span class="kw">fn </span>poll_read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; Poll&lt;<span class="kw">crate</span>::Result&lt;usize&gt;&gt; {
+    <span class="kw">async fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, size: usize) -&gt; <span class="kw">crate</span>::Result&lt;Bytes&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>data) = <span class="self">self</span>.data {
-            <span class="kw">let </span>len = data.len();
-            buf[..len].copy_from_slice(data);
-            Poll::Ready(<span class="prelude-val">Ok</span>(len))
+            <span class="kw">let </span>size = min(size, data.len());
+            <span class="prelude-val">Ok</span>(data.clone().split_to(size))
         } <span class="kw">else </span>{
-            Poll::Ready(<span class="prelude-val">Ok</span>(<span class="number">0</span>))
+            <span class="prelude-val">Ok</span>(Bytes::new())
         }
     }
 
-    <span class="kw">fn </span>poll_seek(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;, <span class="kw">_</span>: SeekFrom) -&gt; Poll&lt;<span class="kw">crate</span>::Result&lt;u64&gt;&gt; {
-        Poll::Ready(<span class="prelude-val">Err</span>(Error::new(
+    <span class="kw">async fn </span>seek(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: SeekFrom) -&gt; <span class="kw">crate</span>::Result&lt;u64&gt; {
+        <span class="prelude-val">Err</span>(Error::new(
             ErrorKind::Unsupported,
             <span class="string">"will be supported in the future"</span>,
-        )))
-    }
-
-    <span class="kw">fn </span>poll_next(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;) -&gt; Poll&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::Result&lt;Bytes&gt;&gt;&gt; {
-        Poll::Ready(<span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(Error::new(
-            ErrorKind::Unsupported,
-            <span class="string">"will be supported in the future"</span>,
-        ))))
+        ))
     }
 }
 
@@ -757,11 +741,7 @@
 }
 
 <span class="kw">impl </span>oio::Write <span class="kw">for </span>MadsimWriter {
-    <span class="kw">fn </span>poll_write(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;,
-        bs: <span class="kw-2">&amp;</span><span class="kw">dyn </span>oio::WriteBuf,
-    ) -&gt; Poll&lt;<span class="kw">crate</span>::Result&lt;usize&gt;&gt; {
+    <span class="kw">async fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, bs: Bytes) -&gt; <span class="kw">crate</span>::Result&lt;usize&gt; {
         <span class="attr">#[cfg(madsim)]
         </span>{
             <span class="kw">let </span>req = Request::Write(<span class="self">self</span>.path.to_string(), bs);
@@ -777,26 +757,26 @@
         }
     }
 
-    <span class="kw">fn </span>poll_abort(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;) -&gt; Poll&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
-        Poll::Ready(<span class="prelude-val">Err</span>(Error::new(
+    <span class="kw">async fn </span>abort(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+        <span class="prelude-val">Err</span>(Error::new(
             ErrorKind::Unsupported,
             <span class="string">"will be supported in the future"</span>,
-        )))
+        ))
     }
 
-    <span class="kw">fn </span>poll_close(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;) -&gt; Poll&lt;<span class="kw">crate</span>::Result&lt;()&gt;&gt; {
-        Poll::Ready(<span class="prelude-val">Ok</span>(()))
+    <span class="kw">async fn </span>close(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;()&gt; {
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
 <span class="kw">pub struct </span>MadsimLister {}
 
 <span class="kw">impl </span>oio::List <span class="kw">for </span>MadsimLister {
-    <span class="kw">fn </span>poll_next(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cx: <span class="kw-2">&amp;mut </span>Context&lt;<span class="lifetime">'_</span>&gt;) -&gt; Poll&lt;<span class="kw">crate</span>::Result&lt;<span class="prelude-ty">Option</span>&lt;oio::Entry&gt;&gt;&gt; {
-        Poll::Ready(<span class="prelude-val">Err</span>(Error::new(
+    <span class="kw">async fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">crate</span>::Result&lt;<span class="prelude-ty">Option</span>&lt;oio::Entry&gt;&gt; {
+        <span class="prelude-val">Err</span>(Error::new(
             ErrorKind::Unsupported,
             <span class="string">"will be supported in the future"</span>,
-        )))
+        ))
     }
 }
 

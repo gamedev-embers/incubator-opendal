@@ -395,6 +395,19 @@
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
 <a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
 </pre></div><pre class="rust"><code><span class="comment">// Licensed to the Apache Software Foundation (ASF) under one
 // or more contributor license agreements.  See the NOTICE file
 // distributed with this work for additional information
@@ -532,7 +545,9 @@
 <span class="attr">#[cfg(feature = <span class="string">"services-memory"</span>)]
 </span><span class="kw">mod </span>memory;
 <span class="attr">#[cfg(feature = <span class="string">"services-memory"</span>)]
-</span><span class="kw">pub use </span>memory::Memory;
+</span><span class="kw">pub use </span><span class="self">self</span>::memory::Memory;
+<span class="attr">#[cfg(feature = <span class="string">"services-memory"</span>)]
+</span><span class="kw">pub use </span><span class="self">self</span>::memory::MemoryConfig;
 
 <span class="attr">#[cfg(feature = <span class="string">"services-mini-moka"</span>)]
 </span><span class="kw">mod </span>mini_moka;
@@ -598,6 +613,8 @@
 </span><span class="kw">mod </span>sled;
 <span class="attr">#[cfg(feature = <span class="string">"services-sled"</span>)]
 </span><span class="kw">pub use </span><span class="self">self</span>::sled::Sled;
+<span class="attr">#[cfg(feature = <span class="string">"services-sled"</span>)]
+</span><span class="kw">pub use </span><span class="self">self</span>::sled::SledConfig;
 
 <span class="attr">#[cfg(feature = <span class="string">"services-supabase"</span>)]
 </span><span class="kw">mod </span>supabase;
@@ -661,6 +678,8 @@
 
 <span class="attr">#[cfg(feature = <span class="string">"services-foundationdb"</span>)]
 </span><span class="kw">mod </span>foundationdb;
+<span class="attr">#[cfg(feature = <span class="string">"services-foundationdb"</span>)]
+</span><span class="kw">pub use </span><span class="self">self</span>::foundationdb::FoundationConfig;
 <span class="attr">#[cfg(feature = <span class="string">"services-foundationdb"</span>)]
 </span><span class="kw">pub use </span><span class="self">self</span>::foundationdb::Foundationdb;
 
@@ -790,4 +809,11 @@
 </span><span class="kw">pub use </span>vercel_blob::VercelBlob;
 <span class="attr">#[cfg(feature = <span class="string">"services-vercel-blob"</span>)]
 </span><span class="kw">pub use </span>vercel_blob::VercelBlobConfig;
+
+<span class="attr">#[cfg(feature = <span class="string">"services-surrealdb"</span>)]
+</span><span class="kw">mod </span>surrealdb;
+<span class="attr">#[cfg(feature = <span class="string">"services-surrealdb"</span>)]
+</span><span class="kw">pub use </span>surrealdb::Surrealdb;
+<span class="attr">#[cfg(feature = <span class="string">"services-surrealdb"</span>)]
+</span><span class="kw">pub use </span>surrealdb::SurrealdbConfig;
 </code></pre></div></section></main></body></html>
